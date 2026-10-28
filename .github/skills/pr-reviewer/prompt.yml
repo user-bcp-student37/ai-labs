@@ -1,0 +1,5 @@
+Utiliza el Skill pr-reviewer para revisar este Pull Request: (https://github.com/NTTData-Academy/ai-labs/pull/18)
+
+Consulta el PR y el diff mediante GitHub MCP. Registra los SHA completos de base y cabeza antes de analizar el código. Revisa exclusivamente seguridad, consulta el contexto en esa misma versión cuando sea necesario y prepara el informe local con evidencia y comprobaciones reproducibles.
+
+No publiques comentarios, no envíes una revisión y no apruebes ni rechaces el PR. Indica expresamente las comprobaciones que no hayas podido realizar.
