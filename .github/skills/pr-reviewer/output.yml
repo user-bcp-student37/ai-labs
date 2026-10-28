@@ -1,0 +1,58 @@
+Revisión local de seguridad: PR #18 (no publicada, no es una aprobación)
+
+Enlace al PR: https://github.com/NTTData-Academy/ai-labs/pull/18
+Repositorio: NTTData-Academy/ai-labs
+Base: main, SHA 91b73a2ce577695ee397f0262fd1d92061c701c6
+Cabeza: dependabot/npm_and_yarn/web/angular/compiler-22.2.3, SHA a6bc8bee7cf12afb60b57b77dba46ce68ac00421
+Criterio aplicado: seguridad.
+Estado del PR: abierto, mergeable_state: blocked, autor dependabot[bot], 2 archivos, +14 / -323.
+
+Archivos y contexto inspeccionados:
+
+Lista de archivos del PR y diff completo (vía GitHub MCP, en los SHA indicados).
+package.json: versión en cabeza (blob 3f43f95) y en base (blob 698cba6), ambas leídas por SHA. La diferencia es solo @angular/compiler de 21.2.19 a 22.2.3.
+package-lock.json: solo hunks del diff. No revisé el archivo completo en el SHA de cabeza.
+Check runs del head: api y auth en success; web, dependencies y analyze (java-kotlin) en failure; analyze (javascript-typescript) y analyze (python) en cancelled.
+Cuerpo del PR: lo leí parcialmente (truncado). Las notas de release de Angular 22.2.3 mencionan "harden param encoding against prototype pollution" y "harden JIT against prototype pollution", pero no las verifiqué completas.
+Pruebas ejecutadas y resultados:
+
+Solo consultas de lectura vía GitHub MCP (metadatos, archivos, diff, check runs, contenido por SHA).
+No ejecuté npm audit, npm ci, pruebas ni builds en local.
+No consulté ninguna base de vulnerabilidades.
+No obtuve los logs de los jobs fallidos.
+Hallazgos:
+
+Ningún defecto de seguridad demostrado en las líneas del diff. El cambio es una actualización de versión de dependencia y del lock file.
+
+Observación 1 (Riesgo por confirmar, severidad no determinada): falla de checks de dependencias y de web.
+
+Evidencia: check runs dependencies (failure, job 121184428704) y web (failure, job 121184428603).
+Mecanismo: si dependencies corresponde a un Dependency Review o SCA, su fallo podría indicar una vulnerabilidad High/Critical introducida. No puedo afirmarlo sin el log.
+Comprobación reproducible: abrir el log del job 121184428704 y confirmar qué paso falló y por qué. Si es un escaneo de vulnerabilidades, revisar el hallazgo concreto.
+Limitaciones: sin acceso a logs, no puedo determinar la causa.
+Observación 2 (Riesgo por confirmar): versiones de Angular mezcladas.
+
+Evidencia: en el head, package.json línea 14 fija @angular/compiler en 22.2.3, mientras @angular/core, @angular/common, @angular/platform-browser y @angular/compiler-cli siguen en 21.2.19 (líneas 13, 15 y siguientes, y devDependencies).
+Mecanismo: la mezcla de versiones mayores puede causar fallos de compilación o comportamiento inesperado. Esto es un problema de compatibilidad, fuera del criterio salvo que genere un impacto de seguridad. Lo registro porque podría explicar el fallo de web.
+Comprobación reproducible: npm ci en web y npm ls @angular/compiler, esperando resolución sin conflictos de peer dependencies.
+Observación 3 (Riesgo por confirmar): integridad del lock file.
+
+Evidencia: el hunk @@ -1134,15 +839,15 @@ cambia node_modules/@angular/compiler a 22.2.3 con integrity: sha512-GjDkmOBq.... El hunk @@ -596,185 +596,34 @@ elimina entradas extraneous de vitest 4.1.11 / @vitest/coverage-v8 anidadas bajo @angular-devkit/build-angular, y añade un @angular/compiler 21.2.25 anidado con dev: true y peer: true.
+Mecanismo: no puedo verificar los hashes integrity contra el registro desde aquí. La entrada anidada 21.2.25 es una segunda copia del compilador en el árbol. Ninguna de estas observaciones demuestra un comportamiento inseguro.
+Comprobación reproducible: npm ci (verifica integridad) y npm ls @angular/compiler para confirmar las copias instaladas.
+Observación 4 (no es hallazgo, contexto): el cambio de versión mayor podría contener correcciones de seguridad (prototype pollution), según las notas del cuerpo del PR. No verificado.
+
+Riesgos pendientes:
+
+Causa del fallo del check dependencies: obtener el log del job y confirmar si hay vulnerabilidades High/Critical.
+Causa del fallo del check web y de analyze (java-kotlin): obtener logs. CodeQL javascript-typescript quedó cancelado, así que no hay resultado de SAST para JS en este PR.
+Resultado de npm audit --audit-level=moderate (script audit:workshop) sobre el lock de cabeza.
+Verificación de integridad y resolución del árbol con npm ci y npm ls @angular/compiler en el SHA de cabeza.
+Cuerpo completo del PR (notas de release) para confirmar las correcciones de seguridad de 22.2.3.
+Cambio de engines en el lock (ahora ^22.22.3 || ^24.15.0 || >=26.0.0 para @angular/compiler): afecta el entorno de ejecución, no es un defecto de seguridad.
+Conclusión:
+
+Defectos demostrados: ninguno en el diff revisado.
+Riesgos pendientes: los cuatro de la lista anterior, principalmente la causa de los checks fallidos y la auditoría de dependencias.
+Áreas no verificadas: resultado real de SCA y CodeQL, logs de CI, integridad del lock mediante instalación, contenido completo del lock en cabeza.
+La ausencia de defectos demostrados no es garantía de seguridad. Este informe no aprueba ni rechaza el PR y no se ha publicado nada en GitHub.
