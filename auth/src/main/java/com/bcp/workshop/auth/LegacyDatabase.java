@@ -1,9 +1,11 @@
 package com.bcp.workshop.auth;
 
+import io.quarkus.runtime.Startup;
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
@@ -15,6 +17,7 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
+@Startup
 @ApplicationScoped
 public class LegacyDatabase {
     private static final String DB_URL = System.getenv().getOrDefault("AUTH_DB_URL", "jdbc:sqlite:./data/workshop.db");
@@ -32,8 +35,8 @@ public class LegacyDatabase {
                 seedUserIfMissing(connection, "student", "Workshop123!", "Workshop Student", "STUDENT");
                 seedUserIfMissing(connection, "trainer", "Trainer123!", "Workshop Trainer", "TRAINER");
             }
-        } catch (Exception error) {
-            error.printStackTrace();
+        } catch (IOException | SQLException error) {
+            throw new IllegalStateException("Legacy database initialization failed", error);
         }
     }
 

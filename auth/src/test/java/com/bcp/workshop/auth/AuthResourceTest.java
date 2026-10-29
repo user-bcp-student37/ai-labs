@@ -271,6 +271,115 @@ class AuthResourceTest {
         }
     }
 
+    @Test
+    void logsInWithTrainerUser() {
+        given()
+                .contentType("application/json")
+                .body("{\"username\":\"trainer\",\"password\":\"Trainer123!\"}")
+                .when().post("/auth/login")
+                .then()
+                .statusCode(200)
+                .body("user.username", is("trainer"))
+                .body("user.displayName", is("Workshop Trainer"))
+                .body("user.role", is("TRAINER"))
+                .body("token", notNullValue())
+                .body("expiresIn", is(3600))
+                .body("debug", is("authenticated-with-legacy-flow"));
+    }
+
+    @Test
+    void logsInWithPlaintextPasswordAfterMigration() throws SQLException {
+        assertLegacyPasswordMigratesAndLogsIn(MIGRATION_PASSWORD);
+    }
+
+    @Test
+    void migratesPlaintextPasswordWithBcrypt2aLikePrefix() throws SQLException {
+        assertLegacyPasswordMigratesAndLogsIn("$2a$10$LegacyFixture123!");
+    }
+
+    @Test
+    void migratesPlaintextPasswordWithBcrypt2bLikePrefix() throws SQLException {
+        assertLegacyPasswordMigratesAndLogsIn("$2b$10$LegacyFixture123!");
+    }
+
+    @Test
+    void migratesPlaintextPasswordWithBcrypt2yLikePrefix() throws SQLException {
+        assertLegacyPasswordMigratesAndLogsIn("$2y$10$LegacyFixture123!");
+    }
+
+    @Test
+    void migratesMalformedPbkdf2LookingPlaintextPassword() throws SQLException {
+        assertLegacyPasswordMigratesAndLogsIn("$pbkdf2-sha256$1$salt$hash");
+    }
+
+    @Test
+    void keepsValidHashUnchangedDuringMigration() throws SQLException {
+        String username = "valid-hash-fixture-" + UUID.randomUUID();
+        String validHash = passwordHasher.hash(MIGRATION_PASSWORD);
+        insertPasswordFixture(username, validHash);
+        try {
+            migratePlaintextPasswords();
+            assertEquals(validHash, readStoredPassword(username));
+        } finally {
+            removePasswordFixture(username);
+        }
+    }
+
+    @Test
+    void seedDoesNotDuplicateExistingUser() throws SQLException {
+        String username = "seed-duplicate-fixture-" + UUID.randomUUID();
+        insertPasswordFixture(username, passwordHasher.hash("FirstFixture123!"));
+        String originalPassword = readStoredPassword(username);
+        try {
+            try (Connection connection = DriverManager.getConnection(DB_URL)) {
+                database.seedUserIfMissing(connection, username, "SecondFixture123!", "Other", "TRAINER");
+            }
+            assertEquals(originalPassword, readStoredPassword(username));
+            assertEquals(1, countUsers(username));
+        } finally {
+            removePasswordFixture(username);
+        }
+    }
+
+    private void assertLegacyPasswordMigratesAndLogsIn(String plaintextPassword) throws SQLException {
+        String username = "legacy-format-fixture-" + UUID.randomUUID();
+        insertPasswordFixture(username, plaintextPassword);
+        try {
+            migratePlaintextPasswords();
+            String migratedPassword = readStoredPassword(username);
+            assertNotEquals(plaintextPassword, migratedPassword);
+            assertTrue(passwordHasher.matches(plaintextPassword, migratedPassword));
+
+            given()
+                    .contentType("application/json")
+                    .body("{\"username\":\"" + username + "\",\"password\":\"" + plaintextPassword + "\"}")
+                    .when().post("/auth/login")
+                    .then()
+                    .statusCode(200)
+                    .body("user.username", is(username));
+        } finally {
+            removePasswordFixture(username);
+        }
+    }
+
+    private void migratePlaintextPasswords() throws SQLException {
+        try (Connection connection = DriverManager.getConnection(DB_URL)) {
+            database.migratePlaintextPasswords(connection);
+        }
+    }
+
+    private int countUsers(String username) throws SQLException {
+        try (Connection connection = DriverManager.getConnection(DB_URL);
+             PreparedStatement statement = connection.prepareStatement(
+                     "SELECT COUNT(*) FROM legacy_users WHERE username = ?")) {
+            statement.setString(1, username);
+            try (ResultSet result = statement.executeQuery()) {
+                assertTrue(result.next());
+                return result.getInt(1);
+            }
+        }
+    }
+
     private void insertPasswordFixture(String username, String password) throws SQLException {
         String sql = "INSERT OR REPLACE INTO legacy_users(username,password,display_name,role) VALUES (?, ?, ?, ?)";
         try (Connection connection = DriverManager.getConnection(DB_URL);
