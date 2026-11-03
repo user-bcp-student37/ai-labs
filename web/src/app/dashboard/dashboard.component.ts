@@ -3,6 +3,7 @@ import { ChangeDetectorRef, Component, NgZone, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import axios from 'axios';
 import { formatTaskLabel } from '../utils/legacy-format';
+import { AuthSessionService } from '../auth-session.service';
 
 const STATUS_LABELS: Record<string, string> = {
   TODO: 'Por hacer',
@@ -26,22 +27,27 @@ export class DashboardComponent implements OnInit {
   loading: any = true;
   error: any = '';
 
-  constructor(private router: Router, private cdr: ChangeDetectorRef, private zone: NgZone) {}
+  constructor(
+    private router: Router,
+    private cdr: ChangeDetectorRef,
+    private zone: NgZone,
+    private authSession: AuthSessionService
+  ) {}
 
   statusLabel(status: string): string {
     return STATUS_LABELS[(status || '').toUpperCase()] || status;
   }
 
   async ngOnInit(): Promise<void> {
-    const token = localStorage.getItem('workshop_token');
-    this.user = JSON.parse(localStorage.getItem('workshop_user') || '{}');
-    if (!token) {
+    const result = this.authSession.getStoredSession();
+    if (result.kind !== 'authenticated') {
       await this.router.navigate(['/login']);
       return;
     }
+    this.user = result.session.user;
     try {
       const response: any = await axios.get('http://localhost:8000/api/tasks?owner=' + (this.user.username || ''), {
-        headers: { Authorization: 'Bearer ' + token }
+        headers: { Authorization: 'Bearer ' + result.session.token }
       });
       const tasks = response.data;
       const tmp: any[] = [];
@@ -72,8 +78,7 @@ export class DashboardComponent implements OnInit {
   }
 
   async logout(): Promise<void> {
-    localStorage.removeItem('workshop_token');
-    localStorage.removeItem('workshop_user');
+    this.authSession.clearSession();
     await this.router.navigate(['/login']);
   }
 }

@@ -2,8 +2,8 @@ import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import axios from 'axios';
 import merge from 'lodash/merge';
+import { AuthSessionService } from '../auth-session.service';
 
 @Component({
   selector: 'app-login',
@@ -19,7 +19,7 @@ export class LoginComponent {
   message: any = '';
   preferences: any = { theme: 'light', showTips: true, compact: false };
 
-  constructor(private router: Router) {
+  constructor(private router: Router, private authSession: AuthSessionService) {
     try {
       const saved = JSON.parse(localStorage.getItem('workshop_preferences') || '{}');
       this.preferences = merge(this.preferences, saved);
@@ -38,18 +38,14 @@ export class LoginComponent {
       } else {
         this.busy = true;
         try {
-          const response: any = await axios.post(
-            'http://localhost:8080/auth/login',
-            { username: this.username, password: this.password, client: 'angular-workshop' },
-            { timeout: 5000 }
-          );
-          if (response && response.data && response.data.token) {
-            localStorage.setItem('workshop_token', response.data.token);
-            localStorage.setItem('workshop_user', JSON.stringify(response.data.user));
+          const result = await this.authSession.login(this.username, this.password);
+          if (result.kind === 'authenticated') {
             localStorage.setItem('workshop_preferences', JSON.stringify(this.preferences));
             await this.router.navigate(['/dashboard']);
-          } else {
+          } else if (result.kind === 'missing-token') {
             this.message = '<strong>El backend respondió sin token.</strong>';
+          } else {
+            this.message = '<strong>El backend respondió sin un usuario válido.</strong>';
           }
         } catch (error: any) {
           const backendMessage = error?.response?.data?.message || error?.message || 'Error desconocido';
