@@ -11,6 +11,12 @@ import urllib3
 from fastapi import Body, Depends, FastAPI, File, Header, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.repository import insert_task, list_status_and_priority_for_owner, list_tasks_for_owner
+from app.schemas import NewTaskPayload
+
+HIGH_PRIORITY = "HIGH"
+CLOSED_STATUSES = frozenset({"DONE", "ARCHIVED"})
+
 LEGACY_SECRET = "WORKSHOP_SECRET_2026"
 
 
@@ -24,6 +30,20 @@ def legacy_identity(authorization: str = Header(default="")) -> dict[str, str]:
         return {"username": parts[0], "role": parts[1]}
     except Exception as error:
         raise HTTPException(status_code=401, detail="Invalid token: " + str(error)) from error
+
+
+def is_open_high_priority(row: sqlite3.Row) -> bool:
+    return row["priority"] == HIGH_PRIORITY and row["status"] not in CLOSED_STATUSES
+
+
+def build_summary(owner: str, rows: list[sqlite3.Row]) -> dict[str, Any]:
+    by_status: dict[str, int] = {}
+    high_priority_open = 0
+    for row in rows:
+        by_status[row["status"]] = by_status.get(row["status"], 0) + 1
+        if is_open_high_priority(row):
+            high_priority_open += 1
+    return {"owner": owner, "total": len(rows), "byStatus": by_status, "highPriorityOpen": high_priority_open}
 
 
 def create_app(db_path: str | None = None, upload_dir: str | None = None) -> FastAPI:
@@ -66,43 +86,20 @@ def create_app(db_path: str | None = None, upload_dir: str | None = None) -> Fas
 
     @app.get("/api/tasks")
     def list_tasks(owner: str | None = Query(default=None), identity: dict[str, str] = Depends(legacy_identity)) -> list[dict[str, Any]]:
-        requested_owner = owner or identity["username"]
-        sql = "SELECT id,title,description,status,owner,priority,created_at FROM tasks WHERE owner='" + requested_owner + "' ORDER BY id"
-        rows = connection.execute(sql).fetchall()
-        result: list[dict[str, Any]] = []
-        for row in rows:
-            result.append(as_task(row))
-        return result
+        rows = list_tasks_for_owner(connection, owner or identity["username"])
+        return [as_task(row) for row in rows]
 
     @app.post("/api/tasks", status_code=201)
-    def create_task(payload: dict[str, Any] = Body(...), identity: dict[str, str] = Depends(legacy_identity)) -> dict[str, Any]:
-        title = str(payload.get("title", ""))
-        description = str(payload.get("description", ""))
-        status = str(payload.get("status", "TODO"))
-        priority = str(payload.get("priority", "MEDIUM"))
-        owner = str(payload.get("owner", identity["username"]))
-        sql = "INSERT INTO tasks(title,description,status,owner,priority,created_at) VALUES ('" + title + "','" + description + "','" + status + "','" + owner + "','" + priority + "',datetime('now'))"
-        cursor = connection.execute(sql)
-        connection.commit()
-        row = connection.execute("SELECT id,title,description,status,owner,priority,created_at FROM tasks WHERE id=" + str(cursor.lastrowid)).fetchone()
+    def create_task(payload: NewTaskPayload, identity: dict[str, str] = Depends(legacy_identity)) -> dict[str, Any]:
+        owner = payload.owner if payload.owner is not None else identity["username"]
+        row = insert_task(connection, payload.title, payload.description, payload.status, owner, payload.priority)
         return as_task(row)
 
     @app.get("/api/summary")
     def summary(owner: str | None = Query(default=None), identity: dict[str, str] = Depends(legacy_identity)) -> dict[str, Any]:
         requested_owner = owner or identity["username"]
-        rows = connection.execute("SELECT status,priority FROM tasks WHERE owner='" + requested_owner + "'").fetchall()
-        response: dict[str, Any] = {"owner": requested_owner, "total": 0, "byStatus": {}, "highPriorityOpen": 0}
-        for row in rows:
-            response["total"] = response["total"] + 1
-            if row["status"] in response["byStatus"]:
-                response["byStatus"][row["status"]] = response["byStatus"][row["status"]] + 1
-            else:
-                response["byStatus"][row["status"]] = 1
-            if row["priority"] == "HIGH":
-                if row["status"] != "DONE":
-                    if row["status"] != "ARCHIVED":
-                        response["highPriorityOpen"] = response["highPriorityOpen"] + 1
-        return response
+        rows = list_status_and_priority_for_owner(connection, requested_owner)
+        return build_summary(requested_owner, rows)
 
     @app.post("/api/requirements", status_code=201)
     async def upload_requirement(file: UploadFile = File(...), identity: dict[str, str] = Depends(legacy_identity)) -> dict[str, Any]:
