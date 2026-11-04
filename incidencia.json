@@ -1,0 +1,19 @@
+{
+  "title": "H-WEB-02: recuperación ante una sesión local inválida",
+  "component": "web",
+  "findingId": "H-WEB-02",
+  "findingState": "CANDIDATO",
+  "summary": "La evidencia documental indica que el login persiste el usuario sin validarlo y que el dashboard analiza el usuario guardado antes de su manejo de errores. Una respuesta sin usuario o un valor persistido inválido podría interrumpir la inicialización sin recuperación controlada.",
+  "proposedPriority": "Media",
+  "evidence": [
+    {
+      "reference": "web/src/app/login/login.component.ts:46-49",
+      "detail": "La matriz documenta que response.data.user se persiste sin validación previa."
+    },
+    {
+      "reference": "web/src/app/dashboard/dashboard.component.ts:36-37",
+      "detail": "La matriz documenta que JSON.parse se ejecuta antes del bloque que maneja errores de carga."
+    }
+  ],
+  "validation": "Probar respuesta de login sin usuario, usuario persistido ausente o inválido y sesión válida; confirmar recuperación controlada y continuidad de la carga de tareas."
+}

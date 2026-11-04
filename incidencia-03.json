@@ -1,0 +1,33 @@
+{
+  "case_id": "caso-03",
+  "title": "Aparece una alerta de posible cargo duplicado",
+  "file": "caso-03-cargos.log",
+  "format": "Texto con pares clave/valor",
+  "context": "El sistema de tarjetas detecta dos movimientos asociados a un mismo pago y operaciones necesita evidencia para conciliar.",
+  "lines": [
+    {
+      "line": 1,
+      "text": "2026-11-03T11:00:00-05:00 INFO service=tarjetas correlation_id=PAY-DEMO-301 event_id=evt-301 code=PAYMENT_ACCEPTED amount=80.00 currency=PEN card=[REDACTADO]"
+    },
+    {
+      "line": 2,
+      "text": "2026-11-03T11:00:01-05:00 INFO service=tarjetas correlation_id=PAY-DEMO-301 event_id=evt-302 code=DEBIT_RECORDED movement_id=MOV-DEMO-01 amount=80.00 currency=PEN"
+    },
+    {
+      "line": 3,
+      "text": "2026-11-03T11:00:02-05:00 INFO service=tarjetas correlation_id=PAY-DEMO-301 event_id=evt-303 code=DEBIT_RECORDED movement_id=MOV-DEMO-02 amount=80.00 currency=PEN"
+    },
+    {
+      "line": 4,
+      "text": "2026-11-03T11:00:03-05:00 ERROR service=tarjetas correlation_id=PAY-DEMO-301 event_id=evt-304 code=DUPLICATE_DEBIT_SUSPECTED movement_ids=MOV-DEMO-01,MOV-DEMO-02 card=[REDACTADO]"
+    },
+    {
+      "line": 5,
+      "text": "2026-11-03T11:00:03-05:00 ERROR service=tarjetas correlation_id=PAY-DEMO-301 event_id=evt-304 code=DUPLICATE_DEBIT_SUSPECTED movement_ids=MOV-DEMO-01,MOV-DEMO-02 card=[REDACTADO]"
+    },
+    {
+      "line": 6,
+      "text": "2026-11-03T11:00:04-05:00 WARN service=tarjetas correlation_id=PAY-DEMO-301 event_id=evt-305 code=RECONCILIATION_PENDING message=\"No hay resultado de conciliacion disponible\""
+    }
+  ]
+}

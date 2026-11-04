@@ -1,0 +1,29 @@
+{
+  "case_id": "caso-01",
+  "title": "La transferencia no confirma su resultado",
+  "file": "caso-01-transferencias.log",
+  "format": "Texto con pares clave/valor",
+  "context": "Una transferencia queda esperando y soporte necesita saber qué ocurrió antes de indicar al cliente que vuelva a intentarlo.",
+  "lines": [
+    {
+      "line": 1,
+      "text": "2026-11-03T09:00:00-05:00 INFO service=transferencias correlation_id=TRX-DEMO-101 event_id=evt-101 received amount=120.00 currency=PEN account=[REDACTADO]"
+    },
+    {
+      "line": 2,
+      "text": "2026-11-03T09:00:05-05:00 ERROR service=transferencias correlation_id=TRX-DEMO-101 event_id=evt-102 code=TRF_TIMEOUT upstream=core-demo timeout_ms=5000 status=PENDING token=[REDACTADO]"
+    },
+    {
+      "line": 3,
+      "text": "2026-11-03T09:00:05-05:00 ERROR service=transferencias correlation_id=TRX-DEMO-101 event_id=evt-102 code=TRF_TIMEOUT upstream=core-demo timeout_ms=5000 status=PENDING token=[REDACTADO]"
+    },
+    {
+      "line": 4,
+      "text": "2026-11-03T09:00:12-05:00 ERROR service=transferencias correlation_id=TRX-DEMO-101 event_id=evt-103 code=TRF_TIMEOUT upstream=core-demo timeout_ms=5000 status=PENDING account=[REDACTADO]"
+    },
+    {
+      "line": 5,
+      "text": "2026-11-03T09:01:00-05:00 INFO service=transferencias correlation_id=TRX-DEMO-102 event_id=evt-104 code=TRANSFER_OK status=COMPLETED"
+    }
+  ]
+}

@@ -1,0 +1,136 @@
+{
+  "contractVersion": "0.1.0",
+  "status": "proposed-awaiting-portal-validation",
+  "source": "Workflow described in the user-provided diagram; not confirmed against a live portal MCP server.",
+  "tools": [
+    {
+      "name": "registrar_incidencia",
+      "description": "Register an approved, sanitized incident and return its portal incident ID.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "title",
+          "component",
+          "findingId",
+          "findingState",
+          "summary",
+          "proposedPriority",
+          "evidence",
+          "validation"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1
+          },
+          "component": {
+            "type": "string",
+            "enum": [
+              "auth",
+              "api",
+              "web"
+            ]
+          },
+          "findingId": {
+            "type": "string",
+            "pattern": "^H-(AUTH|API|WEB)-[0-9]{2}$"
+          },
+          "findingState": {
+            "type": "string",
+            "minLength": 1
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1
+          },
+          "proposedPriority": {
+            "type": "string",
+            "enum": [
+              "Baja",
+              "Media",
+              "Alta"
+            ]
+          },
+          "evidence": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "reference",
+                "detail"
+              ],
+              "properties": {
+                "reference": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "detail": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          "validation": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "incidentId"
+        ],
+        "properties": {
+          "incidentId": {
+            "type": "string",
+            "pattern": "^INC-[A-Z0-9-]+$"
+          }
+        }
+      }
+    },
+    {
+      "name": "consultar_incidencia",
+      "description": "Look up a portal incident by the ID returned by registrar_incidencia.",
+      "inputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "incidentId"
+        ],
+        "properties": {
+          "incidentId": {
+            "type": "string",
+            "pattern": "^INC-[A-Z0-9-]+$"
+          }
+        }
+      },
+      "outputSchema": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "incidentId",
+          "found"
+        ],
+        "properties": {
+          "incidentId": {
+            "type": "string",
+            "pattern": "^INC-[A-Z0-9-]+$"
+          },
+          "found": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  ]
+}
+
